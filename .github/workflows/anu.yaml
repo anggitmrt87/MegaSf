@@ -1,0 +1,48 @@
+name: Download MEGA & Upload to SourceForge (SSH Key)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mega_url:
+        description: 'Public URL file/folder MEGA'
+        required: true
+      sf_path:
+        description: 'Path tujuan di SourceForge (contoh: /home/frs/project/hyperos-3/China/)'
+        required: true
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt -y update
+          sudo apt install -y megatools rsync openssh-client sshpass
+
+      - name: Download from MEGA
+        id: download
+        run: |
+          mkdir -p downloads
+          cd downloads
+          megadl "${{ github.event.inputs.mega_url }}"
+          ITEM=$(ls -1)
+          echo "ITEM=$ITEM" >> $GITHUB_ENV
+          if [ -d "$ITEM" ]; then echo "IS_DIR=true" >> $GITHUB_ENV; else echo "IS_DIR=false" >> $GITHUB_ENV; fi
+
+      - name: Setup SSH key untuk SourceForge
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SF_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan frs.sourceforge.net >> ~/.ssh/known_hosts
+
+      - name: Upload ke SourceForge via rsync
+        env:
+          SF_USER: ${{ secrets.SF_USERNAME }}
+        run: |
+          SRC="downloads/${{ env.ITEM }}"
+          DEST="$SF_USER@frs.sourceforge.net:${{ github.event.inputs.sf_path }}"
+          if [ "${{ env.IS_DIR }}" = "true" ]; then SRC="$SRC/"; fi
+          rsync -avP -e "ssh -i ~/.ssh/id_rsa" "$SRC" "$DEST"
