@@ -16,8 +16,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          sudo apt -y update
-          sudo apt install -y megatools rsync openssh-client sshpass
+          sudo apt update
+          sudo apt install -y megatools rsync openssh-client
 
       - name: Download from MEGA
         id: download
@@ -41,9 +41,8 @@ jobs:
       - name: Upload ke SourceForge via rsync
         env:
           SF_USER: ${{ secrets.SF_USERNAME }}
-          SF_PASS: ${{ secrets.SF_PASS }}
         run: |
           SRC="downloads/${{ env.ITEM }}"
           DEST="$SF_USER@frs.sourceforge.net:${{ github.event.inputs.sf_path }}"
           if [ "${{ env.IS_DIR }}" = "true" ]; then SRC="$SRC/"; fi
-          sshpass -p "$SF_PASS" rsync -avP -e "$SRC" "$DEST"
+          rsync -avP "$SRC" "$DEST"
