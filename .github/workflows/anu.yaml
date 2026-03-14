@@ -41,8 +41,9 @@ jobs:
       - name: Upload ke SourceForge via rsync
         env:
           SF_USER: ${{ secrets.SF_USERNAME }}
+          SF_PASS: ${{ secrets.SF_PASS }}
         run: |
           SRC="downloads/${{ env.ITEM }}"
           DEST="$SF_USER@frs.sourceforge.net:${{ github.event.inputs.sf_path }}"
           if [ "${{ env.IS_DIR }}" = "true" ]; then SRC="$SRC/"; fi
-          rsync -avP -e "ssh -i ~/.ssh/id_rsa" "$SRC" "$DEST"
+          sshpass -p "$SF_PASS" rsync -avP -e "$SRC" "$DEST"
